@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Details</title>
+    <style>
+        .video-card {
+            display: inline-block;
+            width: calc(30% - 20px);
+            margin: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .video-card img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            text-align: left;
+        }
+
+        ul li {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #f0f0f0;
+            width: 80%;
+            border-radius: 4px;
+            display: inline-block;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>YouTube Video Details</h1>
+        
+        <!-- Input for the search query -->
+        <input type="text" id="searchQuery" placeholder="Enter search text">
+        
+        <!-- Input for customizing the number of search results -->
+        <input type="number" id="numResults" placeholder="Number of results" min="1" max="50">
+        
+        <button onclick="searchVideos()">Search Videos</button>
+        <button onclick="downloadCSV()">Download as CSV</button>
+        
+        <br />
+        <br />
+        <br />
+        <div id="videos"></div>
+    </div>
+
+    <script>
+        const allVideoData = [
+            ['Title', 'Channel', 'View Count', 'Like Count', 'Comment Count'],
+        ];
+
+        // Function to handle searching videos based on user input
+        function searchVideos() {
+            const query = document.getElementById("searchQuery").value;
+            const numResults = document.getElementById("numResults").value || 5; // Default to 5 if not provided
+
+            if (query) {
+                const API_KEY = "AIzaSyCrzTV4Gsy0nd97iMG4EwivqjNAcBlXE3U"; // Replace with your actual API key
+                const PARTS = "snippet";
+                const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=${PARTS}&q=${encodeURIComponent(query)}&type=video&maxResults=${numResults}&key=${API_KEY}`;
+
+                fetch(apiUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        const videoDetails = document.getElementById("videos");
+                        videoDetails.innerHTML = ""; // Clear previous results
+
+                        // Loop through the search results and fetch video details
+                        data.items.forEach(item => {
+                            const videoId = item.id.videoId;
+                            const thumbnailUrl = item.snippet.thumbnails.medium.url;
+                            const videoCard = document.createElement("div");
+                            videoCard.classList.add("video-card");
+
+                            // Fetch detailed information for each video
+                            const videoDetailUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${API_KEY}`;
+                            fetch(videoDetailUrl)
+                                .then(response => response.json())
+                                .then(detailData => {
+                                    const videoData = detailData.items[0];
+                                    const snippet = videoData.snippet;
+                                    const statistics = videoData.statistics;
+
+                                    videoCard.innerHTML = `
+                                        <img src="${thumbnailUrl}" alt="Video Thumbnail">
+                                        <ul>
+                                            <li><strong>Title:</strong> ${snippet.title}</li>
+                                            <li><strong>Channel:</strong> ${snippet.channelTitle}</li>
+                                            <li><strong>Views:</strong> ${statistics.viewCount}</li>
+                                            <li><strong>Likes:</strong> ${statistics.likeCount}</li>
+                                            <li><strong>Comments:</strong> ${statistics.commentCount}</li>
+                                        </ul>
+                                    `;
+                                    videoDetails.appendChild(videoCard);
+
+                                    const currentVideoDetails = [snippet.title, snippet.channelTitle, statistics.viewCount, statistics.likeCount, statistics.commentCount];
+                                    allVideoData.push(currentVideoDetails);
+                                })
+                                .catch(error => console.error("Error fetching video details:", error));
+                        });
+                    })
+                    .catch(error => console.error("Error fetching video search results:", error));
+            }
+        }
+
+        function arrayToCSV(data) {
+            const csvRows = [];
+            for (const row of data) {
+                const csvColumns = row.map(value => `"${value}"`);
+                csvRows.push(csvColumns.join(','));
+            }
+            return csvRows.join('\n');
+        }
+
+        function downloadCSV() {
+            const csvContent = arrayToCSV(allVideoData);
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+
+</html>

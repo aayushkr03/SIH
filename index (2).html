@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Details</title>
+    <style>
+        .video-card {
+            display: inline-block;
+            width: calc(30% - 20px);
+            margin: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .video-card img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            text-align: left;
+        }
+
+        ul li {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #f0f0f0;
+            width: 80%;
+            border-radius: 4px;
+            display: inline-block;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>YouTube Video Details</h1>
+        <input type="text" id="videoUrl" placeholder="Enter a Youtube URL">
+        <button onclick="fetchVideoDetails()">Fetch Details</button>
+        <button class="clear-button" onclick="downloadCSV()">Download as CSV</button>
+        <br />
+        <br />
+        <br />
+        <div id="videos">
+
+        </div>
+    </div>
+
+    <script>
+
+        const allVideoData = [
+            ['Title', 'Channel', 'View Coumt', 'Like Count', 'Comment Count','Comment Thread'],
+        ];
+        function fetchVideoDetails() {
+            const videoUrl = document.getElementById("videoUrl").value;
+            const videoId = extractVideoId(videoUrl);
+            if (videoId) {
+                const API_KEY = "AIzaSyCrzTV4Gsy0nd97iMG4EwivqjNAcBlXE3U";
+                const PARTS = "snippet,statistics";
+                const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=${PARTS}&id=${videoId}&key=${API_KEY}`;
+
+                fetch(apiUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        const videoData = data.items[0];
+                        const snippet = videoData.snippet;
+                        const statistics = videoData.statistics;
+                        const thumbnailUrl = snippet.thumbnails.standard.url;
+
+                        const videoDetails = document.getElementById("videos");
+                        const videoCard = document.createElement("div");
+                        videoCard.classList.add("video-card");
+                        videoCard.innerHTML = `
+                            <img src="${thumbnailUrl}" alt="Video Thumbnail">
+                            <ul>
+                                <li><strong>Title:</strong> ${snippet.title}</li>
+                                <li><strong>Channel:</strong> ${snippet.channelTitle}</li>
+                                <li><strong>Views:</strong> ${statistics.viewCount}</li>
+                                <li><strong>Likes:</strong> ${statistics.likeCount}</li>
+                                <li><strong>Comments:</strong> ${statistics.commentCount}</li>
+                            </ul>
+                        `;
+                        videoDetails.appendChild(videoCard);
+                        const currentVideoDetails = [snippet.title, snippet.channelTitle, statistics.viewCount, statistics.likeCount, statistics.commentCount];
+                        allVideoData.push(currentVideoDetails);
+                    })
+                    .catch(error => console.error("Error fetching video details:", error));
+            }
+        }
+
+        const axios = require('axios');
+
+        // Replace with your own API key and video ID
+        const API_KEY = 'AIzaSyCrzTV4Gsy0nd97iMG4EwivqjNAcBlXE3U';
+        const VIDEO_ID = 'YOUR_VIDEO_ID';
+
+        // Define the YouTube Data API endpoint for comments
+        const endpoint = 'https://www.googleapis.com/youtube/v3/commentThreads';
+
+        // Define parameters for the request
+        const params = {
+            key: API_KEY,
+            videoId: VIDEO_ID,
+            part: 'snippet',
+            maxResults: 100, // You can adjust this to your needs
+        };
+
+        // Make the API request to fetch comments
+        axios.get(endpoint, { params })
+            .then(response => {
+                const comments = response.data.items;
+
+                // Process and use the comments as needed
+                console.log(comments);
+            })
+            .catch(error => {
+                console.error('Error fetching comments:', error);
+            });
+
+        function extractVideoId(url) {
+            const videoIdMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/i);
+            if (videoIdMatch) {
+                return videoIdMatch[1];
+            }
+            return null;
+        }
+
+        function arrayToCSV(data) {
+            const csvRows = [];
+            for (const row of data) {
+                const csvColumns = row.map(value => `"${value}"`);
+                csvRows.push(csvColumns.join(','));
+            }
+            return csvRows.join('\n');
+        }
+
+        // Function to trigger CSV download
+        function downloadCSV() {
+            console.log(allVideoData)
+            const csvContent = arrayToCSV(allVideoData);
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function clearDetails() {
+            document.getElementById("videoUrl").value = "";
+        }
+    </script>
+</body>
+
+</html>
